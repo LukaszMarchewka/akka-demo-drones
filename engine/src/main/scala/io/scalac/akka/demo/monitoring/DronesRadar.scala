@@ -23,7 +23,7 @@ class DronesRadar(drones: ActorRef) extends Actor with ActorLogging {
 	/**
 	  * Map with all drones. (droneId -> data)
 	  */
-	var cache: Map[String, DroneData] = Map.empty
+	var snapshot: Map[String, DroneData] = Map.empty
 
 	context.setReceiveTimeout(100.millis)
 
@@ -31,11 +31,24 @@ class DronesRadar(drones: ActorRef) extends Actor with ActorLogging {
 		case ReceiveTimeout =>
 			drones ! Drones.Message.GetStatuses
 
-		case Drone.Response.CurrentStatus(_, droneId, location) =>
-			cache = cache.updated(droneId, DroneData(droneId, location, LocalDateTime.now))
+		case Drone.Response.CurrentStatus(drone, droneId, location, orderId) =>
+			snapshot = snapshot.updated(droneId, DroneData(droneId, drone, location, orderId, LocalDateTime.now))
 
 		case Message.GetSnapshot =>
-			sender() ! Response.Snapshot(cache.values.toList)
+			sender() ! Response.Snapshot(snapshot.values.toList)
+
+		case Message.GetTheNearestAvailable(requestedLoc: Geolocation) =>
+			val available = snapshot.values.filter(data => data.orderId.isEmpty && data.age() <= 1)
+			val theNearest = available.foldLeft(Option.empty[DroneData]) { (theNearest, next) =>
+				theNearest match {
+					case None =>
+						Some(next)
+					case Some(n) if Geolocation.distance(next.loc, requestedLoc) < Geolocation.distance(n.loc, requestedLoc) =>
+						Some(next)
+					case n => n
+				}
+			}
+			theNearest.foreach(data => sender() ! Response.MatchingDrone(data.droneId, data.drone))
 	}
 }
 
@@ -50,6 +63,14 @@ object DronesRadar {
 		  */
 		case object GetSnapshot
 
+		/**
+		  * Get a drone which is an available (doesn't do any job) and is the nearest of a some location.
+		  * Dispatches [[Response.MatchingDrone]] message to a sender on successful search.
+		  *
+		  * @param from searching location.
+		  */
+		case class GetTheNearestAvailable(from: Geolocation)
+
 	}
 
 	object Response {
@@ -61,9 +82,17 @@ object DronesRadar {
 		  */
 		case class Snapshot(drones: List[DroneData])
 
+		/**
+		  * Response message with a matching drone.
+		  *
+		  * @param droneId id of the drone.
+		  * @param drone   actor of the drone.
+		  */
+		case class MatchingDrone(droneId: String, drone: ActorRef)
+
 	}
 
-	case class DroneData(droneId: String, loc: Geolocation, seen: LocalDateTime) {
+	case class DroneData(droneId: String, drone: ActorRef, loc: Geolocation, orderId: Option[String], seen: LocalDateTime) {
 		def age(now: LocalDateTime = LocalDateTime.now): Int = seen.until(now, ChronoUnit.SECONDS).toInt
 	}
 

@@ -28,7 +28,7 @@ class WebServer(drones: ActorRef, dronesRadar: ActorRef, orders: ActorRef)(impli
 					(dronesRadar ? DronesRadar.Message.GetSnapshot)
 						.mapTo[DronesRadar.Response.Snapshot]
 						.map(_.drones.map { drone =>
-							DroneApiDto(drone.droneId, GeolocationApiDto(drone.loc.lat, drone.loc.long), drone.age())
+							DroneApiDto(drone.droneId, GeolocationApiDto(drone.loc.lat, drone.loc.long), drone.orderId, drone.age())
 						})
 				}
 			} ~ post {

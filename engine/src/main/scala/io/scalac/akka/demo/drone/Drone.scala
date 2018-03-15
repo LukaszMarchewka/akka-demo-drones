@@ -23,15 +23,22 @@ class Drone(droneId: String, hqLoc: Geolocation) extends Actor with ActorLogging
 	  */
 	val navigator: ActorRef = context.actorOf(Navigator.props(self, droneId, hqLoc), "navigator")
 
+	/**
+	  * Actor for processing orders.
+	  */
+	val orderProcessor: ActorRef = context.actorOf(OrderProcessor.props(self, droneId), "order")
+
 	override def receive: Receive = {
 		case msg: Message.Fly =>
 			navigator forward msg
+		case msg: Message.ProcessOrder =>
+			orderProcessor forward msg
 		case msg: Message.GetLocation.type =>
 			navigator forward msg
 		case Message.GetStatus =>
 			if (Random.nextDouble() <= stability) {
 				val uuid = UUID.randomUUID().toString
-				context.actorOf(GetStatus.props(self, droneId, sender(), navigator), s"status-$uuid")
+				context.actorOf(GetStatus.props(self, droneId, sender(), navigator, orderProcessor), s"status-$uuid")
 			}
 	}
 }
@@ -49,6 +56,21 @@ object Drone {
 		  * @param to location of the target destination.
 		  */
 		case class Fly(to: Geolocation)
+
+		/**
+		  * Processes an order.
+		  * Following two messages will be dispatches as a direct response on [[Message.ProcessOrder]]:
+		  * Dispatcher [[Response.OrderRejected]] on a rejected order.
+		  * Dispatcher [[Response.OrderAccepted]] on an accepted order by a drone.
+		  * Following two messages will be dispatched during a processing of the order.
+		  * Dispatcher [[Response.OrderCompleted]] on a completed order.
+		  * Dispatcher [[Response.OrderAborted]] on an aborted order.
+		  *
+		  * @param order   reference to [[io.scalac.akka.demo.order.Order]].
+		  * @param orderId id of the order.
+		  * @param where   location of the order.
+		  */
+		case class ProcessOrder(order: ActorRef, orderId: String, where: Geolocation)
 
 		/**
 		  * Gets a current location of a drone.
@@ -98,9 +120,38 @@ object Drone {
 		  *
 		  * @param drone           actor of the drone.
 		  * @param droneId         id of the drone.
-		  * @param currentLocation current location of the drone..
+		  * @param currentLocation current location of the drone.
+		  * @param currentOrderId  id of current order, None - not processing an order.
 		  */
-		case class CurrentStatus(drone: ActorRef, droneId: String, currentLocation: Geolocation)
+		case class CurrentStatus(drone: ActorRef, droneId: String, currentLocation: Geolocation, currentOrderId: Option[String])
+
+		/**
+		  * Order hes been rejected and wasn't assigned to a drone.
+		  *
+		  * @param orderId id of the order.
+		  */
+		case class OrderRejected(orderId: String)
+
+		/**
+		  * Order hes been accepted ba a drone and will be processing now.
+		  *
+		  * @param orderId id of the order.
+		  */
+		case class OrderAccepted(orderId: String)
+
+		/**
+		  * Order hes been completed.
+		  *
+		  * @param orderId id of the order.
+		  */
+		case class OrderCompleted(orderId: String)
+
+		/**
+		  * Order hes been aborted during processing.
+		  *
+		  * @param orderId id of the order.
+		  */
+		case class OrderAborted(orderId: String)
 
 	}
 
