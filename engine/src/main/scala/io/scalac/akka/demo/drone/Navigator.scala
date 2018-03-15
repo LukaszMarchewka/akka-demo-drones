@@ -27,6 +27,9 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 			log.info("[Drone {}] Started a navigation to {}", droneId, to)
 			val scheduler = context.system.scheduler.schedule(200.millis, 200.millis, self, Tick)
 			goto(Fsm.Moving) using Fsm.MovingData(sender(), to, scheduler)
+
+		case Event(Tick, _) =>
+			stay
 	}
 
 	when(Fsm.Moving) {

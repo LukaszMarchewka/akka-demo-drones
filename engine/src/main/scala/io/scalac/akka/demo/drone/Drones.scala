@@ -27,6 +27,9 @@ class Drones(hqLoc: Geolocation) extends Actor with ActorLogging {
 				val drone = context.actorOf(Drone.props(droneId, hqLoc), droneId)
 				drone ! Drone.Message.Fly(randomLocation)
 			}
+
+		case Message.GetStatuses =>
+			context.children.foreach(drone => drone.tell(Drone.Message.GetStatus, sender()))
 	}
 
 	def randomLocation: Geolocation = {
@@ -46,6 +49,11 @@ object Drones {
 		  */
 		case object Create
 
+		/**
+		  * Get statuses of all drones.
+		  * A sender will receive [[Drone.Response.CurrentStatus]] message from each drone.
+		  */
+		case object GetStatuses
 	}
 
 }

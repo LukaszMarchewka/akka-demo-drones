@@ -9,7 +9,7 @@ export default class DronesMap extends Component {
         this.state = {
             drones: []
         };
-        setInterval(() => this.loadDrones(), 1000);
+        this.loadDrones();
     }
 
     render() {
@@ -26,7 +26,9 @@ export default class DronesMap extends Component {
     }
 
     loadDrones() {
-        dronApi.getDrones().then(drones => this.setState({drones: drones}));
+        dronApi.getDrones().then(drones => this.setState({drones: drones}))
+            .then(a => setTimeout(() => this.loadDrones(), 1000))
+            .catch(a => setTimeout(() => this.loadDrones(), 1000));
     }
 
     createOrder(loc) {
