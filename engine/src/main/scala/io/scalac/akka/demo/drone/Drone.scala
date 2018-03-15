@@ -6,6 +6,8 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import io.scalac.akka.demo.drone.Drone._
 import io.scalac.akka.demo.types.Geolocation
 
+import scala.util.Random
+
 /**
   * Representation of a drone.
   *
@@ -13,6 +15,8 @@ import io.scalac.akka.demo.types.Geolocation
   * @param hqLoc   location of the headquarter.
   */
 class Drone(droneId: String, hqLoc: Geolocation) extends Actor with ActorLogging {
+
+	val stability: Double = Random.nextDouble() / 10
 
 	/**
 	  * Actor for navigation of the drone.
@@ -25,8 +29,10 @@ class Drone(droneId: String, hqLoc: Geolocation) extends Actor with ActorLogging
 		case msg: Message.GetLocation.type =>
 			navigator forward msg
 		case Message.GetStatus =>
-			val uuid = UUID.randomUUID().toString
-			context.actorOf(GetStatus.props(self, droneId, sender(), navigator), s"status-$uuid")
+			if (Random.nextDouble() <= stability) {
+				val uuid = UUID.randomUUID().toString
+				context.actorOf(GetStatus.props(self, droneId, sender(), navigator), s"status-$uuid")
+			}
 	}
 }
 

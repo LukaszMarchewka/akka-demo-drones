@@ -1,6 +1,7 @@
 package io.scalac.akka.demo.monitoring
 
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, ReceiveTimeout}
 import io.scalac.akka.demo.drone.{Drone, Drones}
@@ -62,6 +63,8 @@ object DronesRadar {
 
 	}
 
-	case class DroneData(droneId: String, loc: Geolocation, seen: LocalDateTime)
+	case class DroneData(droneId: String, loc: Geolocation, seen: LocalDateTime) {
+		def age(now: LocalDateTime = LocalDateTime.now): Int = seen.until(now, ChronoUnit.SECONDS).toInt
+	}
 
 }

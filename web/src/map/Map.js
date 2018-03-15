@@ -22,7 +22,10 @@ const Map = compose(
             {props.markers.map((marker, index) =>
                 <Marker key={index}
                         position={{lat: marker.lat, lng: marker.long}}
-                        title={marker.title}/>
+                        icon={marker.icon}
+                        title={marker.title}
+                        label={marker.label}
+                        opacity={marker.opacity}/>
             )}
         </GoogleMap>
     );

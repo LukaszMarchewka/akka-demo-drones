@@ -16,7 +16,9 @@ export default class DronesMap extends Component {
         const markers = this.state.drones.map(drone => new Object({
             lat: drone.loc.lat,
             long: drone.loc.long,
-            title: drone.id
+            title: drone.id,
+            opacity: drone.age < 10 ? (10 - drone.age) / 10 : 1,
+            icon: this.getIcon(drone)
         }));
         return (
             <Map center={{lat: 53.117046, long: 23.146447}}
@@ -33,5 +35,12 @@ export default class DronesMap extends Component {
 
     createOrder(loc) {
         orderApi.createOrder(Date.now().toString(), loc);
+    }
+
+    getIcon(drone) {
+        if (drone.age >= 10)
+            return "/marker/death.png";
+        else
+            return "/marker/red.png";
     }
 }

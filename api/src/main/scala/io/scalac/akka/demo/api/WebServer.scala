@@ -26,7 +26,7 @@ class WebServer(drones: ActorRef, dronesRadar: ActorRef)(implicit val system: Ac
 					(dronesRadar ? DronesRadar.Message.GetSnapshot)
 						.mapTo[DronesRadar.Response.Snapshot]
 						.map(_.drones.map { drone =>
-							DroneApiDto(drone.droneId, GeolocationApiDto(drone.loc.lat, drone.loc.long))
+							DroneApiDto(drone.droneId, GeolocationApiDto(drone.loc.lat, drone.loc.long), drone.age())
 						})
 				}
 			} ~ post {
