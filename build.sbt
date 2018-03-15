@@ -35,6 +35,10 @@ lazy val api = (project in file("api"))
 lazy val main = (project in file("main"))
 	.settings(
 		commonSettings,
-		name := "main"
+		name := "main",
+		libraryDependencies ++= Seq(
+			Dependencies.akkaSlf4j,
+			Dependencies.logback
+		)
 	)
 	.dependsOn(api)
