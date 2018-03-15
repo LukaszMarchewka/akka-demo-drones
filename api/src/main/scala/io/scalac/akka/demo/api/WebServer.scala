@@ -10,11 +10,13 @@ import akka.util.Timeout
 import io.scalac.akka.demo.api.model.{CreateDronesApiDto, DroneApiDto, GeolocationApiDto, OrderApiDto}
 import io.scalac.akka.demo.drone.Drones
 import io.scalac.akka.demo.monitoring.DronesRadar
+import io.scalac.akka.demo.order.Orders
+import io.scalac.akka.demo.types.Geolocation
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class WebServer(drones: ActorRef, dronesRadar: ActorRef)(implicit val system: ActorSystem) extends Directives {
+class WebServer(drones: ActorRef, dronesRadar: ActorRef, orders: ActorRef)(implicit val system: ActorSystem) extends Directives {
 	private implicit val materializer: ActorMaterializer = ActorMaterializer()
 	private implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 	private implicit val timeout: Timeout = 200.millis
@@ -38,7 +40,8 @@ class WebServer(drones: ActorRef, dronesRadar: ActorRef)(implicit val system: Ac
 		} ~ path("orders") {
 			post {
 				entity(as[OrderApiDto]) { order =>
-					//todo implement it
+					val where = Geolocation(order.loc.lat, order.loc.long)
+					orders ! Orders.Message.CreateOrder(where)
 					complete(StatusCodes.Accepted)
 				}
 			}

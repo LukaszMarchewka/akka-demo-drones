@@ -17,7 +17,7 @@ object Main {
 }
 
 class MainServer extends DroneSystem {
-	val demo = new WebServer(drones, dronesRadar)(system)
+	val demo = new WebServer(drones, dronesRadar, orders)(system)
 
 	def stop(): Unit = {
 		demo.stop().onComplete(_ => system.terminate())
