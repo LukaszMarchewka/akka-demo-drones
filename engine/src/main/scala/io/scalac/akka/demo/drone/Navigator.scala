@@ -50,6 +50,12 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 			}
 	}
 
+	whenUnhandled {
+		case Event(Drone.Message.GetLocation, _) =>
+			sender() ! Drone.Response.CurrentLocation(drone, droneId, current)
+			stay
+	}
+
 	def isTargetReached(delta: Geolocation, to: Geolocation): Boolean = {
 		Math.abs(current.lat - to.lat) < Math.abs(delta.lat) && Math.abs(current.long - to.long) < Math.abs(delta.long)
 	}
