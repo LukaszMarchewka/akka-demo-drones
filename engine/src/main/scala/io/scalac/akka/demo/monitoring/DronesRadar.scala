@@ -31,8 +31,8 @@ class DronesRadar(drones: ActorRef) extends Actor with ActorLogging {
 		case ReceiveTimeout =>
 			drones ! Drones.Message.GetStatuses
 
-		case Drone.Response.CurrentStatus(drone, droneId, location, orderId) =>
-			snapshot = snapshot.updated(droneId, DroneData(droneId, drone, location, orderId, LocalDateTime.now))
+		case Drone.Response.CurrentStatus(drone, droneId, current, target, orderId) =>
+			snapshot = snapshot.updated(droneId, DroneData(droneId, drone, current, target, orderId, LocalDateTime.now))
 
 		case Message.GetSnapshot =>
 			sender() ! Response.Snapshot(snapshot.values.toList)
@@ -43,7 +43,7 @@ class DronesRadar(drones: ActorRef) extends Actor with ActorLogging {
 				theNearest match {
 					case None =>
 						Some(next)
-					case Some(n) if Geolocation.distance(next.loc, requestedLoc) < Geolocation.distance(n.loc, requestedLoc) =>
+					case Some(n) if Geolocation.distance(next.current, requestedLoc) < Geolocation.distance(n.current, requestedLoc) =>
 						Some(next)
 					case n => n
 				}
@@ -92,7 +92,12 @@ object DronesRadar {
 
 	}
 
-	case class DroneData(droneId: String, drone: ActorRef, loc: Geolocation, orderId: Option[String], seen: LocalDateTime) {
+	case class DroneData(droneId: String,
+	                     drone: ActorRef,
+	                     current: Geolocation,
+	                     target: Option[Geolocation],
+	                     orderId: Option[String],
+	                     seen: LocalDateTime) {
 		def age(now: LocalDateTime = LocalDateTime.now): Int = seen.until(now, ChronoUnit.SECONDS).toInt
 	}
 

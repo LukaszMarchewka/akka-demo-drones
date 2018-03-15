@@ -14,8 +14,8 @@ export default class DronesMap extends Component {
 
     render() {
         const markers = this.state.drones.map(drone => new Object({
-            lat: drone.loc.lat,
-            long: drone.loc.long,
+            lat: drone.current.lat,
+            long: drone.current.long,
             title: drone.id,
             opacity: drone.age < 10 ? (10 - drone.age) / 10 : 1,
             icon: this.getIcon(drone)
@@ -40,7 +40,11 @@ export default class DronesMap extends Component {
     getIcon(drone) {
         if (drone.age >= 10)
             return "/marker/death.png";
+        else if (drone.orderId)
+            return "/marker/fly_red.png";
+        else if (drone.target)
+            return "/marker/fly_green.png";
         else
-            return "/marker/red.png";
+            return "/marker/waiting.png";
     }
 }

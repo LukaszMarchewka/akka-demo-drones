@@ -16,7 +16,7 @@ import scala.util.Random
   */
 class Drone(droneId: String, hqLoc: Geolocation) extends Actor with ActorLogging {
 
-	val stability: Double = Random.nextDouble() / 10
+	val stability: Double = Random.nextDouble() / 4
 
 	/**
 	  * Actor for navigation of the drone.
@@ -33,8 +33,6 @@ class Drone(droneId: String, hqLoc: Geolocation) extends Actor with ActorLogging
 			navigator forward msg
 		case msg: Message.ProcessOrder =>
 			orderProcessor forward msg
-		case msg: Message.GetLocation.type =>
-			navigator forward msg
 		case Message.GetStatus =>
 			if (Random.nextDouble() <= stability) {
 				val uuid = UUID.randomUUID().toString
@@ -73,12 +71,6 @@ object Drone {
 		case class ProcessOrder(order: ActorRef, orderId: String, where: Geolocation)
 
 		/**
-		  * Gets a current location of a drone.
-		  * Dispatches a [[Response.CurrentLocation]] message to the sender with the current location.
-		  */
-		case object GetLocation
-
-		/**
 		  * Gets a status of a drone.
 		  * Dispatches a [[Response.CurrentStatus]] message to the sender with the current status.
 		  */
@@ -107,23 +99,19 @@ object Drone {
 		case class FlyAborted(drone: ActorRef, droneId: String, loc: Geolocation)
 
 		/**
-		  * Response message with a current location of the drone.
-		  *
-		  * @param drone           actor of the drone.
-		  * @param droneId         id of the drone.
-		  * @param currentLocation current location of the drone..
-		  */
-		case class CurrentLocation(drone: ActorRef, droneId: String, currentLocation: Geolocation)
-
-		/**
 		  * Response message with a current status of the drone.
 		  *
 		  * @param drone           actor of the drone.
 		  * @param droneId         id of the drone.
 		  * @param currentLocation current location of the drone.
+		  * @param targetLocation  optional target location (only for flying the drone).
 		  * @param currentOrderId  id of current order, None - not processing an order.
 		  */
-		case class CurrentStatus(drone: ActorRef, droneId: String, currentLocation: Geolocation, currentOrderId: Option[String])
+		case class CurrentStatus(drone: ActorRef,
+		                         droneId: String,
+		                         currentLocation: Geolocation,
+		                         targetLocation: Option[Geolocation],
+		                         currentOrderId: Option[String])
 
 		/**
 		  * Order hes been rejected and wasn't assigned to a drone.

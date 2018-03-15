@@ -28,6 +28,10 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 			val scheduler = context.system.scheduler.schedule(200.millis, 200.millis, self, Tick)
 			goto(Fsm.Moving) using Fsm.MovingData(sender(), to, scheduler)
 
+		case Event(Message.GetLocation, _) =>
+			sender() ! Response.CurrentLocation(drone, droneId, current, None)
+			stay
+
 		case Event(Tick, _) =>
 			stay
 	}
@@ -37,6 +41,10 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 			previousRequester ! Drone.Response.FlyAborted(drone, droneId, previousTo)
 			log.info("[Drone {}] Changed a target location to {}", droneId, to)
 			stay using Fsm.MovingData(sender(), to, scheduler)
+
+		case Event(Message.GetLocation, Fsm.MovingData(_, to, _)) =>
+			sender() ! Response.CurrentLocation(drone, droneId, current, Some(to))
+			stay
 
 		case Event(Tick, Fsm.MovingData(requester, to, scheduler)) =>
 			val delta: Geolocation = Geolocation.delta(current, to, speed)
@@ -53,12 +61,6 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 			}
 	}
 
-	whenUnhandled {
-		case Event(Drone.Message.GetLocation, _) =>
-			sender() ! Drone.Response.CurrentLocation(drone, droneId, current)
-			stay
-	}
-
 	def isTargetReached(delta: Geolocation, to: Geolocation): Boolean = {
 		Math.abs(current.lat - to.lat) < Math.abs(delta.lat) && Math.abs(current.long - to.long) < Math.abs(delta.long)
 	}
@@ -68,6 +70,30 @@ private[drone] object Navigator {
 	def props(drone: ActorRef, droneId: String, hqLoc: Geolocation): Props = Props(new Navigator(drone, droneId, hqLoc))
 
 	private val speed: Double = 0.001
+
+	object Message {
+
+		/**
+		  * Gets a current location of a drone.
+		  * Dispatches a [[Response.CurrentLocation]] message to the sender with the current location.
+		  */
+		case object GetLocation
+
+	}
+
+	object Response {
+
+		/**
+		  * Response message with a current location of the drone.
+		  *
+		  * @param drone           actor of the drone.
+		  * @param droneId         id of the drone.
+		  * @param currentLocation current location of the drone.
+		  * @param targetLocation  optional target location (only when the drone is flying to somewhere).
+		  */
+		case class CurrentLocation(drone: ActorRef, droneId: String, currentLocation: Geolocation, targetLocation: Option[Geolocation])
+
+	}
 
 	private[Navigator] case object Tick
 
