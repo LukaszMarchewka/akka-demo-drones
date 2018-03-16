@@ -34,7 +34,7 @@ export default class DronesMap extends Component {
     }
 
     createOrder(loc) {
-        orderApi.createOrder(Date.now().toString(), loc);
+        orderApi.createOrder(loc);
     }
 
     getIcon(drone) {

@@ -15,8 +15,8 @@ class DronApi {
 }
 
 class OrderApi {
-    createOrder(id, loc) {
-        return instance.post('/orders', {id: id, loc: loc});
+    createOrder(loc) {
+        return instance.post('/orders', {loc: loc});
     }
 }
 
