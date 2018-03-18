@@ -7,6 +7,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props, ReceiveTimeout}
 import io.scalac.akka.demo.drone.{Drone, Drones}
 import io.scalac.akka.demo.monitoring.DronesRadar._
 import io.scalac.akka.demo.types.Geolocation
+import io.scalac.akka.demo.types.Geolocation.{Distance, Speed}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -31,8 +32,8 @@ class DronesRadar(drones: ActorRef) extends Actor with ActorLogging {
 		case ReceiveTimeout =>
 			drones ! Drones.Message.GetStatuses
 
-		case Drone.Response.CurrentStatus(drone, droneId, current, target, orderId) =>
-			snapshot = snapshot.updated(droneId, DroneData(droneId, drone, current, target, orderId, LocalDateTime.now))
+		case Drone.Response.CurrentStatus(drone, droneId, current, target, speed, orderId) =>
+			snapshot = snapshot.updated(droneId, DroneData(droneId, drone, current, target, speed, orderId, LocalDateTime.now))
 
 		case Message.GetSnapshot =>
 			sender() ! Response.Snapshot(snapshot.values.toList)
@@ -48,7 +49,10 @@ class DronesRadar(drones: ActorRef) extends Actor with ActorLogging {
 					case n => n
 				}
 			}
-			theNearest.foreach(data => sender() ! Response.MatchingDrone(data.droneId, data.drone))
+			theNearest.foreach { data =>
+				val distance = Geolocation.distance(data.current, requestedLoc)
+				sender() ! Response.NearestDrone(data.droneId, data.drone, distance, data.speed)
+			}
 	}
 }
 
@@ -65,7 +69,7 @@ object DronesRadar {
 
 		/**
 		  * Get a drone which is an available (doesn't do any job) and is the nearest of a some location.
-		  * Dispatches [[Response.MatchingDrone]] message to a sender on successful search.
+		  * Dispatches [[Response.NearestDrone]] message to a sender on successful search.
 		  *
 		  * @param from searching location.
 		  */
@@ -83,12 +87,14 @@ object DronesRadar {
 		case class Snapshot(drones: List[DroneData])
 
 		/**
-		  * Response message with a matching drone.
+		  * Response message with a nearest drone.
 		  *
-		  * @param droneId id of the drone.
-		  * @param drone   actor of the drone.
+		  * @param droneId  id of the drone.
+		  * @param drone    actor of the drone.
+		  * @param distance distance to the drone.
+		  * @param speed    speed of the drone.
 		  */
-		case class MatchingDrone(droneId: String, drone: ActorRef)
+		case class NearestDrone(droneId: String, drone: ActorRef, distance: Distance, speed: Speed)
 
 	}
 
@@ -96,6 +102,7 @@ object DronesRadar {
 	                     drone: ActorRef,
 	                     current: Geolocation,
 	                     target: Option[Geolocation],
+	                     speed: Speed,
 	                     orderId: Option[String],
 	                     seen: LocalDateTime) {
 		def age(now: LocalDateTime = LocalDateTime.now): Int = seen.until(now, ChronoUnit.SECONDS).toInt

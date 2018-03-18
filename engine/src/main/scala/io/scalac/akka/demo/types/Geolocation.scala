@@ -7,6 +7,8 @@ case class Geolocation(lat: Latitude, long: Longitude)
 object Geolocation {
 	type Latitude = Double
 	type Longitude = Double
+	type Distance = Double
+	type Speed = Double
 
 	/**
 	  * Calculates a distance between two locations.
@@ -15,7 +17,7 @@ object Geolocation {
 	  * @param loc2 second location.
 	  * @return the distance between them.
 	  */
-	def distance(loc1: Geolocation, loc2: Geolocation): Double = {
+	def distance(loc1: Geolocation, loc2: Geolocation): Distance = {
 		Math.sqrt(Math.pow(loc1.lat - loc2.lat, 2) + Math.pow(loc1.long - loc2.long, 2))
 	}
 

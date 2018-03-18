@@ -16,14 +16,12 @@ private[drone] class OrderProcessor(drone: ActorRef, droneId: String) extends FS
 
 	implicit val ex: ExecutionContext = context.dispatcher
 
-	startWith(Fsm.Waiting, Fsm.WaitingData)
+	startWith(Fsm.Waiting, Fsm.EmptyData)
 
 	when(Fsm.Waiting) {
 		case Event(Drone.Message.ProcessOrder(order, orderId, where), _) =>
 			log.info("[Drone {}] Processing of an order '{}' from location {}", droneId, orderId, where)
-			drone ! Drone.Message.Fly(where)
-			sender() ! Drone.Response.OrderAccepted(orderId)
-			goto(Fsm.Processing) using Fsm.ProcessingData(order, orderId, where)
+			goto(Fsm.Processing) using Fsm.OrderData(order, orderId, where)
 
 		case Event(Message.GetProcessingOrder, _) =>
 			sender() ! Response.ProcessingOrder(None)
@@ -31,22 +29,32 @@ private[drone] class OrderProcessor(drone: ActorRef, droneId: String) extends FS
 	}
 
 	when(Fsm.Processing) {
-		case Event(Drone.Message.ProcessOrder(_, newOrderId, _), Fsm.ProcessingData(_, currentOrderId, _)) =>
+		case Event(Drone.Message.ProcessOrder(_, newOrderId, _), Fsm.OrderData(_, currentOrderId, _)) =>
 			log.info("[Drone {}] New order with the id '{}' can't be processed because it is processing order '{}'", droneId, newOrderId, currentOrderId)
 			sender() ! Drone.Response.OrderRejected(newOrderId)
 			stay
 
-		case Event(Drone.Response.TargetDestinationReached(_, `droneId`, reachedDestination), Fsm.ProcessingData(order, orderId, where)) if reachedDestination == where =>
+		case Event(Drone.Response.TargetDestinationReached(_, `droneId`, reachedDestination), Fsm.OrderData(order, orderId, where)) if reachedDestination == where =>
 			order ! Drone.Response.OrderCompleted(orderId)
-			goto(Fsm.Waiting) using Fsm.WaitingData
+			goto(Fsm.Waiting) using Fsm.EmptyData
 
-		case Event(Drone.Response.FlyAborted(_, `droneId`, reachedDestination), Fsm.ProcessingData(order, orderId, where)) if reachedDestination == where =>
+		case Event(Drone.Response.FlyAborted(_, `droneId`, reachedDestination), Fsm.OrderData(order, orderId, where)) if reachedDestination == where =>
 			order ! Drone.Response.OrderAborted(orderId)
-			goto(Fsm.Waiting) using Fsm.WaitingData
+			goto(Fsm.Waiting) using Fsm.EmptyData
 
-		case Event(Message.GetProcessingOrder, Fsm.ProcessingData(_, orderId, _)) =>
+		case Event(Message.GetProcessingOrder, Fsm.OrderData(_, orderId, _)) =>
 			sender() ! Response.ProcessingOrder(Some(orderId))
 			stay
+	}
+
+	onTransition {
+		case Fsm.Waiting -> Fsm.Processing =>
+			nextStateData match {
+				case Fsm.OrderData(order, orderId, where) =>
+					drone ! Drone.Message.Fly(where)
+					order ! Drone.Response.OrderAccepted(orderId)
+				case Fsm.EmptyData => //nothing to do
+			}
 	}
 
 }
@@ -84,9 +92,9 @@ private[drone] object OrderProcessor {
 
 		sealed trait Data
 
-		case object WaitingData extends Data
+		case object EmptyData extends Data
 
-		case class ProcessingData(order: ActorRef, orderId: String, where: Geolocation) extends Data
+		case class OrderData(order: ActorRef, orderId: String, where: Geolocation) extends Data
 
 	}
 

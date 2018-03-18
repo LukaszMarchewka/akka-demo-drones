@@ -3,6 +3,7 @@ package io.scalac.akka.demo.drone
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, PoisonPill, Props}
 import io.scalac.akka.demo.drone.GetStatus.LocationData
 import io.scalac.akka.demo.types.Geolocation
+import io.scalac.akka.demo.types.Geolocation.Speed
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -43,8 +44,8 @@ private[drone] class GetStatus(drone: ActorRef,
 	}
 
 	override def receive: Receive = {
-		case Navigator.Response.CurrentLocation(_, `droneId`, currentLocation, targetLocation) =>
-			optionalLocation = Some(LocationData(currentLocation, targetLocation))
+		case Navigator.Response.CurrentLocation(_, `droneId`, currentLocation, targetLocation, speed) =>
+			optionalLocation = Some(LocationData(currentLocation, targetLocation, speed))
 			maybeFinish()
 
 		case OrderProcessor.Response.ProcessingOrder(Some(orderId)) =>
@@ -61,7 +62,7 @@ private[drone] class GetStatus(drone: ActorRef,
 			location <- optionalLocation
 			order <- optionalOrder
 		} yield {
-			requester ! Drone.Response.CurrentStatus(drone, droneId, location.current, location.target, order.toOption)
+			requester ! Drone.Response.CurrentStatus(drone, droneId, location.current, location.target, location.speed, order.toOption)
 			timeout.cancel()
 			context.stop(self)
 		}
@@ -72,6 +73,6 @@ private[drone] object GetStatus {
 	def props(drone: ActorRef, droneId: String, requester: ActorRef, navigator: ActorRef, orderProcessor: ActorRef): Props =
 		Props(new GetStatus(drone, droneId, requester, navigator, orderProcessor))
 
-	private[GetStatus] case class LocationData(current: Geolocation, target: Option[Geolocation])
+	private[GetStatus] case class LocationData(current: Geolocation, target: Option[Geolocation], speed: Speed)
 
 }

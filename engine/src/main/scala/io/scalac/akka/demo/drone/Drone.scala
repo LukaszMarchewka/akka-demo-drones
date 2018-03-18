@@ -5,6 +5,7 @@ import java.util.UUID
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import io.scalac.akka.demo.drone.Drone._
 import io.scalac.akka.demo.types.Geolocation
+import io.scalac.akka.demo.types.Geolocation.Speed
 
 import scala.util.Random
 
@@ -105,12 +106,14 @@ object Drone {
 		  * @param droneId         id of the drone.
 		  * @param currentLocation current location of the drone.
 		  * @param targetLocation  optional target location (only for flying the drone).
+		  * @param speed           speed of the drone.
 		  * @param currentOrderId  id of current order, None - not processing an order.
 		  */
 		case class CurrentStatus(drone: ActorRef,
 		                         droneId: String,
 		                         currentLocation: Geolocation,
 		                         targetLocation: Option[Geolocation],
+		                         speed: Speed,
 		                         currentOrderId: Option[String])
 
 		/**

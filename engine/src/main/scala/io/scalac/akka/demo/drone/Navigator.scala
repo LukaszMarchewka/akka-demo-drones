@@ -1,11 +1,12 @@
 package io.scalac.akka.demo.drone
 
 import akka.actor.{ActorLogging, ActorRef, Cancellable, FSM, Props}
+import io.scalac.akka.demo.config.Config._
 import io.scalac.akka.demo.drone.Navigator._
 import io.scalac.akka.demo.types.Geolocation
+import io.scalac.akka.demo.types.Geolocation.Speed
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 /**
   * Navigate a drone from one location to another one.
@@ -25,11 +26,11 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 	when(Fsm.Resting) {
 		case Event(Drone.Message.Fly(to), _) =>
 			log.info("[Drone {}] Started a navigation to {}", droneId, to)
-			val scheduler = context.system.scheduler.schedule(200.millis, 200.millis, self, Tick)
+			val scheduler = context.system.scheduler.schedule(droneNavigationInterval, droneNavigationInterval, self, Tick)
 			goto(Fsm.Moving) using Fsm.MovingData(sender(), to, scheduler)
 
 		case Event(Message.GetLocation, _) =>
-			sender() ! Response.CurrentLocation(drone, droneId, current, None)
+			sender() ! Response.CurrentLocation(drone, droneId, current, None, speed)
 			stay
 
 		case Event(Tick, _) =>
@@ -43,7 +44,7 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 			stay using Fsm.MovingData(sender(), to, scheduler)
 
 		case Event(Message.GetLocation, Fsm.MovingData(_, to, _)) =>
-			sender() ! Response.CurrentLocation(drone, droneId, current, Some(to))
+			sender() ! Response.CurrentLocation(drone, droneId, current, Some(to), speed)
 			stay
 
 		case Event(Tick, Fsm.MovingData(requester, to, scheduler)) =>
@@ -69,7 +70,7 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 private[drone] object Navigator {
 	def props(drone: ActorRef, droneId: String, hqLoc: Geolocation): Props = Props(new Navigator(drone, droneId, hqLoc))
 
-	private val speed: Double = 0.001
+	private val speed: Speed = 0.001
 
 	object Message {
 
@@ -90,8 +91,9 @@ private[drone] object Navigator {
 		  * @param droneId         id of the drone.
 		  * @param currentLocation current location of the drone.
 		  * @param targetLocation  optional target location (only when the drone is flying to somewhere).
+		  * @param speed           speed of the drone.
 		  */
-		case class CurrentLocation(drone: ActorRef, droneId: String, currentLocation: Geolocation, targetLocation: Option[Geolocation])
+		case class CurrentLocation(drone: ActorRef, droneId: String, currentLocation: Geolocation, targetLocation: Option[Geolocation], speed: Speed)
 
 	}
 
