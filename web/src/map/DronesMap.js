@@ -45,6 +45,6 @@ export default class DronesMap extends Component {
         else if (drone.target)
             return "/marker/fly_green.png";
         else
-            return "/marker/waiting.png";
+            return "/marker/blue.png";
     }
 }
