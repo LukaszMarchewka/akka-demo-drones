@@ -8,13 +8,13 @@ class DronApi {
     getDrones() {
         return instance.get('/drones').then(response => response.data);
     }
-
-    createDrones(number) {
-        return instance.post('/drones', {number: number});
-    }
 }
 
 class OrderApi {
+    getOrders() {
+        return instance.get('/orders').then(response => response.data);
+    }
+
     createOrder(loc) {
         return instance.post('/orders', {loc: loc});
     }

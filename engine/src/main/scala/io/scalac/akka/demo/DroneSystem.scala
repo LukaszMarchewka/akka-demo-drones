@@ -2,7 +2,7 @@ package io.scalac.akka.demo
 
 import akka.actor.{ActorRef, ActorSystem}
 import io.scalac.akka.demo.drone.Drones
-import io.scalac.akka.demo.monitoring.DronesRadar
+import io.scalac.akka.demo.monitoring.{DronesRadar, OrdersMonitor}
 import io.scalac.akka.demo.order.Orders
 import io.scalac.akka.demo.types.Geolocation
 
@@ -14,6 +14,8 @@ trait DroneSystem {
 	val drones: ActorRef = system.actorOf(Drones.props(hqLoc), "drones")
 
 	val dronesRadar: ActorRef = system.actorOf(DronesRadar.props(drones).withMailbox("prio-mailbox"), "dronesRadar")
+
+	val ordersMonitor: ActorRef = system.actorOf(OrdersMonitor.props.withMailbox("prio-mailbox"), "ordersMonitor")
 
 	val orders: ActorRef = system.actorOf(Orders.props(dronesRadar), "orders")
 

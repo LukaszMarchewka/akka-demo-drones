@@ -27,6 +27,7 @@ class Order(orderId: String, where: Geolocation, dronesRadar: ActorRef)
 
 	override def preStart(): Unit = {
 		log.info("[Order {}] Created an order for a location '{}'", orderId, where)
+		context.system.eventStream.publish(Order.Event.OrderCreated(orderId, where))
 		self ! StateTimeout
 	}
 
@@ -73,12 +74,27 @@ class Order(orderId: String, where: Geolocation, dronesRadar: ActorRef)
 	onTransition {
 		case _ -> Fsm.WaitingForCandidate =>
 			dronesRadar ! DronesRadar.Message.GetTheNearestAvailable(where)
+
 		case _ -> Fsm.NegotiatingDeal =>
 			nextStateData match {
 				case Fsm.DroneData(drone, _, _, _) =>
 					drone ! Drone.Message.ProcessOrder(self, orderId, where)
 				case Fsm.EmptyData => //nothing to do
 			}
+
+		case _ -> Fsm.InProgress =>
+			nextStateData match {
+				case Fsm.DroneData(_, droneId, _, _) =>
+					context.system.eventStream.publish(Order.Event.OrderAssigned(orderId, where, droneId))
+				case Fsm.EmptyData => //nothing to do
+			}
+
+		case Fsm.InProgress -> Fsm.Idle =>
+			context.system.eventStream.publish(Order.Event.OrderAborted(orderId, where))
+	}
+
+	override def postStop(): Unit = {
+		context.system.eventStream.publish(Order.Event.OrderCompleted(orderId))
 	}
 }
 
@@ -103,6 +119,22 @@ object Order {
 		case object EmptyData extends Data
 
 		case class DroneData(drone: ActorRef, droneId: String, distance: Distance, speed: Speed) extends Data
+
+	}
+
+	object Event {
+
+		sealed trait OrderEvent {
+			val orderId: String
+		}
+
+		case class OrderCreated(orderId: String, where: Geolocation) extends OrderEvent
+
+		case class OrderAssigned(orderId: String, where: Geolocation, droneId: String) extends OrderEvent
+
+		case class OrderAborted(orderId: String, where: Geolocation) extends OrderEvent
+
+		case class OrderCompleted(orderId: String) extends OrderEvent
 
 	}
 

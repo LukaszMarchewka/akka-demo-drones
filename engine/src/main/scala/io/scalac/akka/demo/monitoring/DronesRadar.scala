@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, ReceiveTimeout}
 import io.scalac.akka.demo.drone.{Drone, Drones}
 import io.scalac.akka.demo.monitoring.DronesRadar._
+import io.scalac.akka.demo.monitoring.mailbox.QueryPrioritizedMailbox
 import io.scalac.akka.demo.types.Geolocation
 import io.scalac.akka.demo.types.Geolocation.{Distance, Speed}
 
@@ -65,7 +66,7 @@ object DronesRadar {
 		  * Get a snapshot with all drones.
 		  * Dispatches [[Response.Snapshot]] message to a sender.
 		  */
-		case object GetSnapshot
+		case object GetSnapshot extends QueryPrioritizedMailbox.QueryMessage
 
 		/**
 		  * Get a drone which is an available (doesn't do any job) and is the nearest of a some location.
