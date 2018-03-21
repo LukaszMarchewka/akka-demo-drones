@@ -10,6 +10,7 @@ import io.scalac.akka.demo.types.Geolocation.{Distance, Speed}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.util.Random
 
 /**
   * Representation of an order.
@@ -28,12 +29,20 @@ class Order(orderId: String, where: Geolocation, dronesRadar: ActorRef)
 	override def preStart(): Unit = {
 		log.info("[Order {}] Created an order for a location '{}'", orderId, where)
 		context.system.eventStream.publish(Order.Event.OrderCreated(orderId, where))
-		self ! StateTimeout
+		context.system.scheduler.scheduleOnce(Random.nextInt(2000).millis, self, StateTimeout)
 	}
 
-	when(Fsm.Idle, 10.seconds) {
+	when(Fsm.Idle, Random.nextInt(2000).millis + 10.seconds) {
 		case Event(StateTimeout, _) =>
 			goto(Fsm.WaitingForCandidate) using Fsm.EmptyData
+
+		case Event(DronesRadar.Response.NearestDrone(droneId, drone, distance, speed), _) =>
+			log.debug("[Order {}] The nearest drone is '{}'", orderId, droneId)
+			goto(Fsm.NegotiatingDeal) using Fsm.DroneData(drone, droneId, distance, speed)
+
+		case Event(Drone.Response.OrderAccepted(`orderId`), Fsm.DroneData(_, droneId, distance, speed)) =>
+			log.debug("[Order {}] The order has been accepted be the drone '{}'", orderId, droneId)
+			goto(Fsm.InProgress) forMax ((distance / speed) * 1.5 * droneNavigationInterval)
 	}
 
 	when(Fsm.WaitingForCandidate, 1.second) {

@@ -27,7 +27,7 @@ class DronesRadar(drones: ActorRef) extends Actor with ActorLogging {
 	  */
 	var snapshot: Map[String, DroneData] = Map.empty
 
-	context.setReceiveTimeout(100.millis)
+	context.setReceiveTimeout(200.millis)
 
 	override def receive: Receive = {
 		case ReceiveTimeout =>

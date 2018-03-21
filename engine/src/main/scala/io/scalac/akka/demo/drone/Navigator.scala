@@ -70,7 +70,7 @@ private[drone] class Navigator(drone: ActorRef, droneId: String, hqLoc: Geolocat
 private[drone] object Navigator {
 	def props(drone: ActorRef, droneId: String, hqLoc: Geolocation): Props = Props(new Navigator(drone, droneId, hqLoc))
 
-	private val speed: Speed = 0.001
+	private val speed: Speed = 0.002
 
 	object Message {
 
