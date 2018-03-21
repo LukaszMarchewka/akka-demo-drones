@@ -2,6 +2,8 @@ package io.scalac.akka.demo.types
 
 import io.scalac.akka.demo.types.Geolocation.{Latitude, Longitude}
 
+import scala.util.Random
+
 case class Geolocation(lat: Latitude, long: Longitude)
 
 object Geolocation {
@@ -34,5 +36,17 @@ object Geolocation {
 		val latDelta = (to.lat - from.lat) / steps
 		val longDelta = (to.long - from.long) / steps
 		Geolocation(latDelta, longDelta)
+	}
+
+	/**
+	  * Create a random location around some point.
+	  *
+	  * @param center central point.
+	  * @return random location.
+	  */
+	def randomLocation(center: Geolocation): Geolocation = {
+		val newLat = center.lat + Random.nextDouble() - 0.5
+		val newLong = center.long + Random.nextDouble() - 0.5
+		Geolocation(newLat, newLong)
 	}
 }
